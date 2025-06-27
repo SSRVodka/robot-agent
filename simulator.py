@@ -166,11 +166,20 @@ class RobotSimulator:
             # 此时 target 不可能是 None
             return self._target
         target_pos = self.position
+        sqrt2_inv = 1.414 / 2
         match direction.direction:
-            case rc.RobotDirection.LEFT:
-                target_pos.y += direction.distance
-            case rc.RobotDirection.RIGHT:
-                target_pos.y -= direction.distance
+            case rc.RobotDirection.FORWARD_LEFT:
+                target_pos.x += direction.distance * sqrt2_inv
+                target_pos.y += direction.distance * sqrt2_inv
+            case rc.RobotDirection.FORWARD_RIGHT:
+                target_pos.x += direction.distance * sqrt2_inv
+                target_pos.y -= direction.distance * sqrt2_inv
+            case rc.RobotDirection.BACKWARD_LEFT:
+                target_pos.x -= direction.distance * sqrt2_inv
+                target_pos.y += direction.distance * sqrt2_inv
+            case rc.RobotDirection.BACKWARD_RIGHT:
+                target_pos.x -= direction.distance * sqrt2_inv
+                target_pos.y -= direction.distance * sqrt2_inv
             case rc.RobotDirection.FORWARD:
                 target_pos.x += direction.distance
             case rc.RobotDirection.BACKWARD:

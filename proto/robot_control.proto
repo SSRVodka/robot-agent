@@ -78,8 +78,10 @@ message RobotDirection {
   enum Direction {
     FORWARD = 0;
     BACKWARD = 1;
-    LEFT = 2;
-    RIGHT = 3;
+    FORWARD_LEFT = 2;
+    FORWARD_RIGHT = 3;
+    BACKWARD_LEFT = 4;
+    BACKWARD_RIGHT = 5;
   }
   Direction direction = 1;
   uint32 distance = 2;

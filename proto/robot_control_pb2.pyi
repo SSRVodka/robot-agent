@@ -110,12 +110,16 @@ class RobotDirection(_message.Message):
         __slots__ = ()
         FORWARD: _ClassVar[RobotDirection.Direction]
         BACKWARD: _ClassVar[RobotDirection.Direction]
-        LEFT: _ClassVar[RobotDirection.Direction]
-        RIGHT: _ClassVar[RobotDirection.Direction]
+        FORWARD_LEFT: _ClassVar[RobotDirection.Direction]
+        FORWARD_RIGHT: _ClassVar[RobotDirection.Direction]
+        BACKWARD_LEFT: _ClassVar[RobotDirection.Direction]
+        BACKWARD_RIGHT: _ClassVar[RobotDirection.Direction]
     FORWARD: RobotDirection.Direction
     BACKWARD: RobotDirection.Direction
-    LEFT: RobotDirection.Direction
-    RIGHT: RobotDirection.Direction
+    FORWARD_LEFT: RobotDirection.Direction
+    FORWARD_RIGHT: RobotDirection.Direction
+    BACKWARD_LEFT: RobotDirection.Direction
+    BACKWARD_RIGHT: RobotDirection.Direction
     DIRECTION_FIELD_NUMBER: _ClassVar[int]
     DISTANCE_FIELD_NUMBER: _ClassVar[int]
     direction: RobotDirection.Direction

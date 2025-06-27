@@ -36,7 +36,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger("RobotMCP")
 
-
 # ────────────────────────────────────────────────────────────────────────────
 #  Environment / CLI configuration
 # ────────────────────────────────────────────────────────────────────────────
@@ -92,6 +91,7 @@ mcp = FastMCP(
 
 def common_svr_handler(func: Callable[..., Any]) -> Callable[..., Any]:
     """Install exception catch common body for server handlers"""
+
     @functools.wraps(func)
     def wrapper(*args, **kwargs) -> Any:
         try:
@@ -105,6 +105,7 @@ def common_svr_handler(func: Callable[..., Any]) -> Callable[..., Any]:
         except Exception as e:
             logger.exception(f"Unexpected error in {func.__name__}")
             return {"error": "Internal server error", "details": str(e)}
+
     return wrapper
 
 
@@ -292,8 +293,14 @@ async def place_object(object_name_hint: str) -> dict:
 
 @mcp.tool
 @common_svr_handler
-async def move_relative(direction: Literal["LEFT", "RIGHT", "FORWARD", "BACKWARD"], distance: float) -> dict:
-    """Do relative moving. `direction` can be 'LEFT', 'RIGHT', 'FORWARD', or 'BACKWARD'. `distance` is meters. \
+async def move_relative(
+        direction: Literal[
+            "LEFT_FORWARD", "LEFT_BACKWARD",
+            "RIGHT_FORWARD", "RIGHT_BACKWARD",
+            "FORWARD", "BACKWARD"
+        ], distance: float) -> dict:
+    """Do relative moving. `direction` can be 'LEFT_FORWARD', 'LEFT_BACKWARD', 'RIGHT_FORWARD', 'RIGHT_BACKWARD',\
+    'FORWARD', or 'BACKWARD'. `distance` is meters. \
     Return action result (code, message, etc.)"""
     logger.info("Received move_relative request")
     stub = get_grpc_stub()
@@ -303,10 +310,14 @@ async def move_relative(direction: Literal["LEFT", "RIGHT", "FORWARD", "BACKWARD
     last_state = pb.RobotState()
     direction_ = pb.RobotDirection()
     match direction:
-        case "LEFT":
-            direction_.direction = pb.RobotDirection.LEFT
-        case "RIGHT":
-            direction_.direction = pb.RobotDirection.RIGHT
+        case "LEFT_FORWARD":
+            direction_.direction = pb.RobotDirection.FORWARD_LEFT
+        case "LEFT_BACKWARD":
+            direction_.direction = pb.RobotDirection.BACKWARD_LEFT
+        case "RIGHT_FORWARD":
+            direction_.direction = pb.RobotDirection.FORWARD_RIGHT
+        case "RIGHT_BACKWARD":
+            direction_.direction = pb.RobotDirection.BACKWARD_RIGHT
         case "FORWARD":
             direction_.direction = pb.RobotDirection.FORWARD
         case "BACKWARD":
