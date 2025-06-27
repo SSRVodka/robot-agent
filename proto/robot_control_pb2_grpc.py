@@ -39,6 +39,11 @@ class RobotControlServiceStub(object):
                 request_serializer=proto_dot_robot__control__pb2.TargetPosition.SerializeToString,
                 response_deserializer=proto_dot_robot__control__pb2.ControlResponse.FromString,
                 _registered_method=True)
+        self.StreamMove = channel.unary_stream(
+                '/robot_control.v1.RobotControlService/StreamMove',
+                request_serializer=proto_dot_robot__control__pb2.RobotDirection.SerializeToString,
+                response_deserializer=proto_dot_robot__control__pb2.RobotState.FromString,
+                _registered_method=True)
         self.StreamMoveToPosition = channel.unary_stream(
                 '/robot_control.v1.RobotControlService/StreamMoveToPosition',
                 request_serializer=proto_dot_robot__control__pb2.TargetPosition.SerializeToString,
@@ -71,6 +76,13 @@ class RobotControlServiceServicer(object):
 
     def MoveToPosition(self, request, context):
         """简单移动接口 (请求-响应模式)
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def StreamMove(self, request, context):
+        """简单小位移移动接口
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -118,6 +130,11 @@ def add_RobotControlServiceServicer_to_server(servicer, server):
                     servicer.MoveToPosition,
                     request_deserializer=proto_dot_robot__control__pb2.TargetPosition.FromString,
                     response_serializer=proto_dot_robot__control__pb2.ControlResponse.SerializeToString,
+            ),
+            'StreamMove': grpc.unary_stream_rpc_method_handler(
+                    servicer.StreamMove,
+                    request_deserializer=proto_dot_robot__control__pb2.RobotDirection.FromString,
+                    response_serializer=proto_dot_robot__control__pb2.RobotState.SerializeToString,
             ),
             'StreamMoveToPosition': grpc.unary_stream_rpc_method_handler(
                     servicer.StreamMoveToPosition,
@@ -172,6 +189,33 @@ class RobotControlService(object):
             '/robot_control.v1.RobotControlService/MoveToPosition',
             proto_dot_robot__control__pb2.TargetPosition.SerializeToString,
             proto_dot_robot__control__pb2.ControlResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def StreamMove(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_stream(
+            request,
+            target,
+            '/robot_control.v1.RobotControlService/StreamMove',
+            proto_dot_robot__control__pb2.RobotDirection.SerializeToString,
+            proto_dot_robot__control__pb2.RobotState.FromString,
             options,
             channel_credentials,
             insecure,

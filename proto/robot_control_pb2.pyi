@@ -104,6 +104,24 @@ class ControlResponse(_message.Message):
     suggested_actions: _containers.RepeatedScalarFieldContainer[str]
     def __init__(self, code: _Optional[_Union[ControlResponse.ResultCode, str]] = ..., message: _Optional[str] = ..., current_state: _Optional[_Union[RobotState, _Mapping]] = ..., suggested_actions: _Optional[_Iterable[str]] = ...) -> None: ...
 
+class RobotDirection(_message.Message):
+    __slots__ = ("direction", "distance")
+    class Direction(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+        __slots__ = ()
+        FORWARD: _ClassVar[RobotDirection.Direction]
+        BACKWARD: _ClassVar[RobotDirection.Direction]
+        LEFT: _ClassVar[RobotDirection.Direction]
+        RIGHT: _ClassVar[RobotDirection.Direction]
+    FORWARD: RobotDirection.Direction
+    BACKWARD: RobotDirection.Direction
+    LEFT: RobotDirection.Direction
+    RIGHT: RobotDirection.Direction
+    DIRECTION_FIELD_NUMBER: _ClassVar[int]
+    DISTANCE_FIELD_NUMBER: _ClassVar[int]
+    direction: RobotDirection.Direction
+    distance: int
+    def __init__(self, direction: _Optional[_Union[RobotDirection.Direction, str]] = ..., distance: _Optional[int] = ...) -> None: ...
+
 class PickOrPlaceCmd(_message.Message):
     __slots__ = ("cmd",)
     CMD_FIELD_NUMBER: _ClassVar[int]

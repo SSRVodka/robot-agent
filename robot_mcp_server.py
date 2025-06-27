@@ -7,9 +7,11 @@ Run:  python robot_mcp_server.py --http-port 8000 --grpc-port 50051
 
 from __future__ import annotations
 
+import asyncio.exceptions
 import functools
 import os
-from typing import Callable, Dict, Any
+import sys
+from typing import Callable, Dict, Any, Literal
 
 import grpc
 from google.protobuf.json_format import MessageToDict
@@ -26,13 +28,13 @@ import logging
 # ────────────────────────────────────────────────────────────────────────────
 logging.basicConfig(
     level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
     handlers=[
         logging.StreamHandler(),
         logging.FileHandler("robot_mcp_server.log")
     ]
 )
-logger = logging.getLogger("[RobotMCP]")
+logger = logging.getLogger("RobotMCP")
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -288,6 +290,58 @@ async def place_object(object_name_hint: str) -> dict:
     return pb_to_dict(resp)
 
 
+@mcp.tool
+@common_svr_handler
+async def move_relative(direction: Literal["LEFT", "RIGHT", "FORWARD", "BACKWARD"], distance: float) -> dict:
+    """Do relative moving. `direction` can be 'LEFT', 'RIGHT', 'FORWARD', or 'BACKWARD'. `distance` is meters. \
+    Return action result (code, message, etc.)"""
+    logger.info("Received move_relative request")
+    stub = get_grpc_stub()
+    logger.info("Calling MoveRelative gRPC method")
+
+    # stream move states
+    last_state = pb.RobotState()
+    direction_ = pb.RobotDirection()
+    match direction:
+        case "LEFT":
+            direction_.direction = pb.RobotDirection.LEFT
+        case "RIGHT":
+            direction_.direction = pb.RobotDirection.RIGHT
+        case "FORWARD":
+            direction_.direction = pb.RobotDirection.FORWARD
+        case "BACKWARD":
+            direction_.direction = pb.RobotDirection.BACKWARD
+    direction_.distance = distance
+    async for state in stub.StreamMove(direction_):
+        logger.debug(
+            "Robot movement checks: \n"
+            f"\tPosition: x={state.position.x}, y={state.position.y}, z={state.position.z}\n"
+            f"\tIs Moving: {state.state_code == pb.RobotState.MOVING}\n"
+            f"\tBattery: {state.battery_level:.1%}"
+        )
+
+        if state.warnings:
+            logger.warning(f"Robot current warnings: {', '.join(state.warnings)}")
+
+        last_state = state
+        if state.state_code != pb.RobotState.MOVING:
+            # stream ended
+            break
+
+    # Get current position
+    resp: pb.ControlResponse = await stub.GetCurrentPosition(pb.Empty())
+    # override code & message for move_to_position
+    if last_state.state_code != pb.RobotState.IDLE:
+        logger.warning(f"Invalid robot state after move_relative: {last_state.state_code}")
+        resp.code = pb.ControlResponse.EMERGENCY_STOP
+        resp.message = "Warning:" + (";".join(last_state.warnings))
+    else:
+        resp.message = "Finish moving process."
+    logger.info(f"Received MoveRelative response: code={resp.code}, message={resp.message}")
+
+    return pb_to_dict(resp)
+
+
 # ────────────────────────────────────────────────────────────────────────────
 #  CLI entry-point
 # ────────────────────────────────────────────────────────────────────────────
@@ -314,10 +368,14 @@ if __name__ == "__main__":
     logger.info(f"  Log level: {p_args.log_level}")
     logger.info(f"  Stdio mode: {p_args.stdio}")
 
-    if p_args.stdio:
-        # The transport uses Python standard input/output (stdio) for a local MCP server
-        logger.info("Running in stdio mode")
-        mcp.run(transport="stdio")
-    else:
-        logger.info(f"Starting HTTP server on {p_args.http_host}:{p_args.http_port}")
-        mcp.run(transport="streamable-http", host=p_args.http_host, port=p_args.http_port)
+    try:
+        if p_args.stdio:
+            # The transport uses Python standard input/output (stdio) for a local MCP server
+            logger.info("Running in stdio mode")
+            mcp.run(transport="stdio")
+        else:
+            logger.info(f"Starting HTTP server on {p_args.http_host}:{p_args.http_port}")
+            mcp.run(transport="streamable-http", host=p_args.http_host, port=p_args.http_port)
+    except asyncio.exceptions.CancelledError:
+        logger.warning("MCP server stopped due to cancellation")
+        sys.exit(0)

@@ -1,16 +1,13 @@
 from flask import Flask, request, jsonify
 from datetime import datetime
 
-from agent import FILE_NAME
-
-
-import asyncio
+import prompts
+from agent import RobotAgent, _llm, _server_params
 
 app = Flask(__name__)
 
-loop: asyncio.AbstractEventLoop | None = None
-
-msg_queue = asyncio.Queue(maxsize=1)
+_agent = RobotAgent(_llm, _server_params, prompts.SYSTEM_PROMPT)
+_agent.start()
 
 
 @app.route('/api/delivery/notification', methods=['POST'])
@@ -40,9 +37,9 @@ def handle_notification():
         # 2. 发送给其他服务
         # 3. 触发通知等
 
-        with open(FILE_NAME, "w", encoding="utf-8") as txt:
-            txt.write(
-                "Please go to (0.96, -2.02) and fetch me a screwdriver, then go to (0.37, -1.09) (yaw angle -180 degrees) here and give me the screwdriver.")
+        _agent.submit_message(
+            "Please go to (0.96, -2.02) and fetch me a screwdriver, "
+            "then go to (0.37, -1.09) (yaw angle -180 degrees) here and give me the screwdriver")
 
         return jsonify({
             "status": "success",
@@ -56,6 +53,7 @@ def handle_notification():
 
 def main():
     app.run(host='0.0.0.0', port=17111, debug=True)
+    _agent.stop()
 
 
 if __name__ == '__main__':

@@ -144,6 +144,9 @@ class RobotSimulator:
 
     def set_target(self, target: rc.TargetPosition):
         """设置新的目标位置"""
+        if self.state_code == rc.RobotState.MOVING:
+            simulator_logger.warning("Cannot move a moving robot. Ignored")
+            return
         self._target = target
         self._max_speed = target.max_speed
         self._tolerance = target.tolerance
@@ -155,6 +158,31 @@ class RobotSimulator:
             f"with max speed {target.max_speed:.2f}m/s and tolerance {target.tolerance:.3f}m"
         )
         simulator_logger.info(f"Movement started")
+
+    def move_relative(self, direction: rc.RobotDirection) -> rc.TargetPosition:
+        """小位移微调位置"""
+        if self.state_code == rc.RobotState.MOVING:
+            simulator_logger.warning("Trying to move_tweak while moving. Ignored")
+            # 此时 target 不可能是 None
+            return self._target
+        target_pos = self.position
+        match direction.direction:
+            case rc.RobotDirection.LEFT:
+                target_pos.y += direction.distance
+            case rc.RobotDirection.RIGHT:
+                target_pos.y -= direction.distance
+            case rc.RobotDirection.FORWARD:
+                target_pos.x += direction.distance
+            case rc.RobotDirection.BACKWARD:
+                target_pos.x -= direction.distance
+        target = rc.TargetPosition(
+            position=target_pos,
+            orientation=self.orientation,
+            max_speed=self._max_speed,
+            tolerance=self._tolerance,
+        )
+        self.set_target(target)
+        return target
 
     def emergency_stop(self):
         """紧急停止机器人"""
@@ -326,6 +354,31 @@ class RobotControlServicer(rc_grpc.RobotControlServiceServicer):
             # 发送错误状态
             error_state = self.robot.get_state()
             error_state.warnings.append(f"Streaming error at MoveToPosition: {str(e)}")
+            yield error_state
+
+    def StreamMove(self, request: rc.RobotDirection, context) -> Iterator[rc.RobotState]:
+        service_logger.info("Received move_relative command (stream)")
+        try:
+            target_pos = self.robot.move_relative(request)
+
+            state: rc.RobotState
+            while True:
+                state = self.robot.get_state()
+                if state.state_code != rc.RobotState.MOVING or self._position_reached(state, target_pos):
+                    break
+
+                yield state
+                time.sleep(self.stream_update_interval)
+
+            # yield state state_code != MOVING indicating the end of the stream
+            # 防止一种情况：position reached 但 MOVING，下一轮更新就会变为 IDLE
+            if self._position_reached(state, target_pos):
+                state.state_code = rc.RobotState.IDLE
+            yield state
+
+        except Exception as e:
+            error_state = self.robot.get_state()
+            error_state.warnings.append(f"Streaming error at MoveRelative: {str(e)}")
             yield error_state
 
     def GetCurrentPosition(self, request: rc.Empty, context) -> rc.ControlResponse:

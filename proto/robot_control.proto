@@ -73,6 +73,18 @@ message ControlResponse {
   repeated string suggested_actions = 4; // 建议修复步骤
 }
 
+// 机器人微调运动方向
+message RobotDirection {
+  enum Direction {
+    FORWARD = 0;
+    BACKWARD = 1;
+    LEFT = 2;
+    RIGHT = 3;
+  }
+  Direction direction = 1;
+  uint32 distance = 2;
+}
+
 // 夹起/放下命令
 message PickOrPlaceCmd {
   string cmd = 1;
@@ -81,6 +93,9 @@ message PickOrPlaceCmd {
 service RobotControlService {
   // 简单移动接口 (请求-响应模式)
   rpc MoveToPosition(TargetPosition) returns (ControlResponse);
+
+  // 简单小位移移动接口
+  rpc StreamMove(RobotDirection) returns (stream RobotState);
 
   // 带实时反馈的移动 (服务器流模式)
   rpc StreamMoveToPosition(TargetPosition) returns (stream RobotState);
