@@ -18,3 +18,8 @@ VLM_DETECT_PROMPT = """\
     "xyxy": [xmin, ymin, xmax, ymax]
 }\
 """
+
+MSG = """\
+Please go to (0.52, -1.52) (yaw angle = -180) and fetch me a bottle, \
+then go to (0.48, -0.86) (yaw angle = -180) and give it to me.\
+"""

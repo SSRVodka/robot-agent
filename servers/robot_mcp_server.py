@@ -31,6 +31,8 @@ from PIL import Image
 # because it should be ported to OpenHarmony platform
 from ultralytics import YOLO
 
+from models.paths import MODEL_PATH
+
 import logging
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -469,11 +471,11 @@ async def get_xyxy_from_image() -> Tuple[int, int, int, int]:
     #     logger.error(f"details: {e}")
     #     raise RuntimeError(msg)
 
-    os.makedirs("../tmp", exist_ok=True)
-    resp = await get_robot_camera_image("../tmp")
+    os.makedirs("tmp", exist_ok=True)
+    resp = await get_robot_camera_image("tmp")
 
-    model = YOLO("../models/best.pt")  # 加载预训练模型
-    results = model.predict(resp["image_url"]["file"])  # 推理
+    model = YOLO(MODEL_PATH)
+    results = model.predict(resp["image_url"]["file"])
     try:
         boxes = results[0].boxes.xyxy
         for box in boxes:

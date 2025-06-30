@@ -1,7 +1,7 @@
 import signal
 import sys
 
-from .agent import Agent
+from py_agent.agent import Agent
 
 from langchain_core.tools import BaseTool
 from langchain_openai import ChatOpenAI
@@ -22,27 +22,7 @@ import time
 from dataclasses import dataclass
 from enum import Enum
 
-from common import prompts
-
-# ────────────────────────────────────────────────────────────────────────────
-# Configurations
-# ────────────────────────────────────────────────────────────────────────────
-
-_llm = ChatOpenAI(
-    # model_name="gpt-4o-mini",
-    # temperature=0.3,
-    # base_url="http://localhost:17100",
-    # api_key="sk-dwjeifjiewrpijepwjiw")
-    model_name="doubao-1.5-lite-32k-250115",
-    temperature=0.3,
-    base_url="https://ark.cn-beijing.volces.com/api/v3",
-    api_key="44a02b59-d3d6-4b59-bb82-70649da3d580")
-_server_params = StdioServerParameters(
-    command="python",
-    args=["servers/robot_mcp_server.py", "--stdio", "--grpc-host", "192.168.12.210"],
-    env={"PYTHONPATH": "."},
-    # args=["robot_mcp_server.py", "--stdio"]
-)
+from common import prompts, config
 
 
 class AgentErrorCode(Enum):
@@ -333,7 +313,7 @@ class RobotAgent(Agent):
 
 
 if __name__ == '__main__':
-    agent = RobotAgent(_llm, _server_params, prompts.SYSTEM_PROMPT)
+    agent = RobotAgent(config.llm, config.server_params, prompts.SYSTEM_PROMPT)
 
 
     def handle_signal(signum, _frame):

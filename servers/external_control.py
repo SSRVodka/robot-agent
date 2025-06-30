@@ -1,12 +1,12 @@
 from flask import Flask, request, jsonify
 from datetime import datetime
 
-from common import prompts
-from py_agent.robot_agent import RobotAgent, _llm, _server_params
+from common import prompts, config
+from py_agent.robot_agent import RobotAgent
 
 app = Flask(__name__)
 
-_agent = RobotAgent(_llm, _server_params, prompts.SYSTEM_PROMPT)
+_agent = RobotAgent(config.llm, config.server_params, prompts.SYSTEM_PROMPT)
 _agent.start()
 
 
@@ -37,9 +37,7 @@ def handle_notification():
         # 2. 发送给其他服务
         # 3. 触发通知等
 
-        _agent.submit_message(
-            "Please go to (0.96, -1.546) and fetch me a red block, "
-            "then go to (0.48, -0.86) (yaw angle = -180) and give me the red block")
+        _agent.submit_message(prompts.MSG)
 
         return jsonify({
             "status": "success",
