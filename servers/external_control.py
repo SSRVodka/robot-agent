@@ -37,7 +37,7 @@ def handle_notification():
         # 2. 发送给其他服务
         # 3. 触发通知等
 
-        _agent.submit_message(prompts.MSG)
+        _agent.submit_message(prompts.MSG + data['original_sms'])
 
         return jsonify({
             "status": "success",

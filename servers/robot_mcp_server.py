@@ -331,67 +331,67 @@ async def place_object(object_name_hint: str) -> dict:
     return pb_to_dict(resp)
 
 
-@mcp.tool
-@common_svr_handler
-async def move_relative(direction: str, distance: float) -> dict:
-    """Do relative moving. `direction` can be 'LEFT_FORWARD', 'LEFT_BACKWARD', 'RIGHT_FORWARD', 'RIGHT_BACKWARD',\
-    'FORWARD', or 'BACKWARD'. `distance` is meters. \
-    Return action result (code, message, etc.)"""
-    logger.info("Received move_relative request")
-    stub = get_grpc_control_stub()
-    logger.info("Calling MoveRelative gRPC method")
-
-    # stream move states
-    last_state = pb.RobotState()
-    direction_ = pb.RobotDirection()
-    match direction:
-        case "LEFT_FORWARD":
-            direction_.direction = pb.RobotDirection.FORWARD_LEFT
-        case "LEFT_BACKWARD":
-            direction_.direction = pb.RobotDirection.BACKWARD_LEFT
-        case "RIGHT_FORWARD":
-            direction_.direction = pb.RobotDirection.FORWARD_RIGHT
-        case "RIGHT_BACKWARD":
-            direction_.direction = pb.RobotDirection.BACKWARD_RIGHT
-        case "FORWARD":
-            direction_.direction = pb.RobotDirection.FORWARD
-        case "BACKWARD":
-            direction_.direction = pb.RobotDirection.BACKWARD
-        case _:
-            return {
-                "code": pb.ControlResponse.INVALID_TARGET,
-                "message": f"invalid argument '{direction}' for param direction. "
-                "Use LEFT_FORWARD', 'LEFT_BACKWARD', 'RIGHT_FORWARD', 'RIGHT_BACKWARD', 'FORWARD', or 'BACKWARD'"
-            }
-    direction_.distance = distance
-    async for state in stub.StreamMove(direction_):
-        logger.debug(
-            "Robot movement checks: \n"
-            f"\tPosition: x={state.position.x}, y={state.position.y}, z={state.position.z}\n"
-            f"\tIs Moving: {state.state_code == pb.RobotState.MOVING}\n"
-            f"\tBattery: {state.battery_level:.1%}"
-        )
-
-        if state.warnings:
-            logger.warning(f"Robot current warnings: {', '.join(state.warnings)}")
-
-        last_state = state
-        if state.state_code != pb.RobotState.MOVING:
-            # stream ended
-            break
-
-    # Get current position
-    resp: pb.ControlResponse = await stub.GetCurrentPosition(pb.Empty())
-    # override code & message for move_to_position
-    if last_state.state_code != pb.RobotState.IDLE:
-        logger.warning(f"Invalid robot state after move_relative: {last_state.state_code}")
-        resp.code = pb.ControlResponse.EMERGENCY_STOP
-        resp.message = "Warning:" + (";".join(last_state.warnings))
-    else:
-        resp.message = "Finish moving process."
-    logger.info(f"Received MoveRelative response: code={resp.code}, message={resp.message}")
-
-    return pb_to_dict(resp)
+# @mcp.tool
+# @common_svr_handler
+# async def move_relative(direction: str, distance: float) -> dict:
+#     """Do relative moving. `direction` can be 'LEFT_FORWARD', 'LEFT_BACKWARD', 'RIGHT_FORWARD', 'RIGHT_BACKWARD',\
+#     'FORWARD', or 'BACKWARD'. `distance` is meters. \
+#     Return action result (code, message, etc.)"""
+#     logger.info("Received move_relative request")
+#     stub = get_grpc_control_stub()
+#     logger.info("Calling MoveRelative gRPC method")
+#
+#     # stream move states
+#     last_state = pb.RobotState()
+#     direction_ = pb.RobotDirection()
+#     match direction:
+#         case "LEFT_FORWARD":
+#             direction_.direction = pb.RobotDirection.FORWARD_LEFT
+#         case "LEFT_BACKWARD":
+#             direction_.direction = pb.RobotDirection.BACKWARD_LEFT
+#         case "RIGHT_FORWARD":
+#             direction_.direction = pb.RobotDirection.FORWARD_RIGHT
+#         case "RIGHT_BACKWARD":
+#             direction_.direction = pb.RobotDirection.BACKWARD_RIGHT
+#         case "FORWARD":
+#             direction_.direction = pb.RobotDirection.FORWARD
+#         case "BACKWARD":
+#             direction_.direction = pb.RobotDirection.BACKWARD
+#         case _:
+#             return {
+#                 "code": pb.ControlResponse.INVALID_TARGET,
+#                 "message": f"invalid argument '{direction}' for param direction. "
+#                 "Use LEFT_FORWARD', 'LEFT_BACKWARD', 'RIGHT_FORWARD', 'RIGHT_BACKWARD', 'FORWARD', or 'BACKWARD'"
+#             }
+#     direction_.distance = distance
+#     async for state in stub.StreamMove(direction_):
+#         logger.debug(
+#             "Robot movement checks: \n"
+#             f"\tPosition: x={state.position.x}, y={state.position.y}, z={state.position.z}\n"
+#             f"\tIs Moving: {state.state_code == pb.RobotState.MOVING}\n"
+#             f"\tBattery: {state.battery_level:.1%}"
+#         )
+#
+#         if state.warnings:
+#             logger.warning(f"Robot current warnings: {', '.join(state.warnings)}")
+#
+#         last_state = state
+#         if state.state_code != pb.RobotState.MOVING:
+#             # stream ended
+#             break
+#
+#     # Get current position
+#     resp: pb.ControlResponse = await stub.GetCurrentPosition(pb.Empty())
+#     # override code & message for move_to_position
+#     if last_state.state_code != pb.RobotState.IDLE:
+#         logger.warning(f"Invalid robot state after move_relative: {last_state.state_code}")
+#         resp.code = pb.ControlResponse.EMERGENCY_STOP
+#         resp.message = "Warning:" + (";".join(last_state.warnings))
+#     else:
+#         resp.message = "Finish moving process."
+#     logger.info(f"Received MoveRelative response: code={resp.code}, message={resp.message}")
+#
+#     return pb_to_dict(resp)
 
 
 # @mcp.tool
