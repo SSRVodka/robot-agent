@@ -27,8 +27,8 @@ np_arr = np.frombuffer(image_bytes, np.uint8)
 image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
 # 保存图像
-os.makedirs("train/data", exist_ok=True)
-cv2.imwrite(f"train/data/saved_image-{time.time()}.jpg", image)
+os.makedirs("images", exist_ok=True)
+cv2.imwrite(f"images/saved_image-{time.time()}.jpg", image)
 print("图像已保存为 saved_image.jpg")
 
 # 可选：查看深度图信息

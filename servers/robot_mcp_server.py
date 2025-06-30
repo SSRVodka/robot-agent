@@ -11,8 +11,6 @@ import asyncio.exceptions
 import functools
 import io
 import os
-import random
-import string
 import sys
 import time
 from typing import Callable, Dict, Any, Tuple
@@ -29,9 +27,6 @@ import proto.robot_control_pb2_grpc as pb_grpc
 import base64
 from PIL import Image
 
-from prompts import VLM_SYS_PROMPT, VLM_DETECT_PROMPT
-from langchain_core.messages import HumanMessage, SystemMessage
-
 # It won't be written into requirements.txt
 # because it should be ported to OpenHarmony platform
 from ultralytics import YOLO
@@ -46,7 +41,7 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler("robot_mcp_server.log")
+        logging.FileHandler("../robot_mcp_server.log")
     ]
 )
 logger = logging.getLogger("RobotMCP")
@@ -274,7 +269,7 @@ async def pick_up_object(object_name_hint: str) -> dict:
     # logger.info(f"Detected object '{detected_object_name}' at ({x_min},{y_min})-({x_max},{y_max}) "
     #             f"when picking up '{object_name_hint}'")
     logger.info(f"Detected object '{object_name_hint}' at ({x_min},{y_min})-({x_max},{y_max})")
-    # x_min = y_min = x_max = y_max = 0
+    x_min = y_min = x_max = y_max = 0
 
     req = pb.PickOrPlaceCmd(
         cmd=object_name_hint,
@@ -474,10 +469,10 @@ async def get_xyxy_from_image() -> Tuple[int, int, int, int]:
     #     logger.error(f"details: {e}")
     #     raise RuntimeError(msg)
 
-    os.makedirs("tmp", exist_ok=True)
-    resp = await get_robot_camera_image("tmp")
+    os.makedirs("../tmp", exist_ok=True)
+    resp = await get_robot_camera_image("../tmp")
 
-    model = YOLO("models/best.pt")  # 加载预训练模型
+    model = YOLO("../models/best.pt")  # 加载预训练模型
     results = model.predict(resp["image_url"]["file"])  # 推理
     try:
         boxes = results[0].boxes.xyxy

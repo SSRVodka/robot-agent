@@ -4,19 +4,19 @@ from ultralytics import YOLO
 # Test ONLY (not in requirements.txt)
 import cv2
 
-# img = 'tmp/robot-camera-FoJEMSFSMOTa38vL.jpg'
-# img = 'tmp/robot-camera-qCGfvvZGZ0y6h5Cw.jpg'
-# img = 'tmp/robot-camera-5RG0FB2DRhSMyT3l.jpg'
-# img = 'tmp/1751172448649.jpg'
-# img = 'tmp/1751172531893.jpg'
-# img = 'tmp/1751175160019.jpg'
-# img = 'tmp/robot-camera-l6oV9Kddyyxr39iY.jpg'
-# img = 'train/images/000000000672.jpg'
-img = 'tmp/robot-camera-1751264908448767095.jpg'
+# img = '../tmp/robot-camera-FoJEMSFSMOTa38vL.jpg'
+# img = '../tmp/robot-camera-qCGfvvZGZ0y6h5Cw.jpg'
+# img = '../tmp/robot-camera-5RG0FB2DRhSMyT3l.jpg'
+# img = '../tmp/1751172448649.jpg'
+# img = '../tmp/1751172531893.jpg'
+# img = '../tmp/1751175160019.jpg'
+# img = '../tmp/robot-camera-l6oV9Kddyyxr39iY.jpg'
+# img = '../train/images/000000000672.jpg'
+img = '../tmp/robot-camera-1751264908448767095.jpg'
 
 
 image = cv2.imread(img)
-model = YOLO("models/best.pt")
+model = YOLO("../models/best.pt")
 results = model.predict(img, show=True, save_txt=True)
 
 for detection in results:

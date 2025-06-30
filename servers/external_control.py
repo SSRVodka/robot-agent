@@ -1,8 +1,8 @@
 from flask import Flask, request, jsonify
 from datetime import datetime
 
-import prompts
-from robot_agent import RobotAgent, _llm, _server_params
+from common import prompts
+from py_agent.robot_agent import RobotAgent, _llm, _server_params
 
 app = Flask(__name__)
 

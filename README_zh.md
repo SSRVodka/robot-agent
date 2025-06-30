@@ -60,19 +60,34 @@ llm = ChatOpenAI(
 
 ### 3. 项目启动
 
-你需要先启动一个 HTTP server，接收来自手机/其他 agent 的消息，执行：
+首先想要执行项目需要导入项目包为本地包：
 
 ```shell
-python external_control.py
+pip install -e .
+```
+
+（可选）然后开发时在 IDE 中设置：
+
+- VSCode：在 `.vscode/settings.json` 添加：
+  ```json
+  {
+    "terminal.integrated.env.linux": {"PYTHONPATH": "${workspaceFolder}"},
+    "python.analysis.extraPaths": ["${workspaceFolder}"]
+  }
+  ```
+  
+- PyCharm：右键项目根目录 -> Mark Directory as -> Sources Root；
+
+
+
+接下来，你需要先启动一个 HTTP server，接收来自手机/其他 agent 的消息，执行：
+
+```shell
+python servers/external_control.py
 ```
 
 你可以在该文件中修改启动配置（例如端口、监听主机地址等等）；
 
-在另一个窗口中启动 `agent.py`，它向上处理 HTTP Server 接收到的消息，推理后向下调用 ROS 机器人端的 gRPC server，来实现机器人控制的目的。
-
-```shell
-python agent.py
-```
-
 如果你希望在模拟器中运行测试，则可以修改 `agent.py` 中的监听地址为本地，并且启动 `simulator.py`，即可下达指令！
 
+> 注：直接运行 `py_agent/robot_agent.py` 即可使用命令行（而非 HTTP 接口）来与 Agent 交互。

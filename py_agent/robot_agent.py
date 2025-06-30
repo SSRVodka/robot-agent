@@ -22,7 +22,7 @@ import time
 from dataclasses import dataclass
 from enum import Enum
 
-import prompts
+from common import prompts
 
 # ────────────────────────────────────────────────────────────────────────────
 # Configurations
@@ -43,7 +43,8 @@ _llm = ChatOpenAI(
 # api_key="sk-Tk5qmFP5JRLdsNoNA3Cc6cE967754a8984B352205755Bc20")
 _server_params = StdioServerParameters(
     command="python",
-    args=["robot_mcp_server.py", "--stdio", "--grpc-host", "192.168.12.210"],
+    args=["servers/robot_mcp_server.py", "--stdio", "--grpc-host", "192.168.12.210"],
+    env={"PYTHONPATH": "."},
     # args=["robot_mcp_server.py", "--stdio"]
 )
 
@@ -92,7 +93,7 @@ class RobotAgent(Agent):
             datefmt="%Y-%m-%d %H:%M:%S"
         )
         ch.setFormatter(formatter)
-        # self.logger.addHandler(ch)
+        self.logger.addHandler(ch)
 
         self.logger.setLevel(self.log_level)
         ch.setLevel(self.log_level)

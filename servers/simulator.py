@@ -246,11 +246,11 @@ class RobotSimulator:
         )
 
     def get_camera_image(self) -> rc.ImageResponse:
-        with open("mock/camera.jpg", mode="rb") as img:
+        with open("../mock/camera.jpg", mode="rb") as img:
             img_bytes = img.read()
             if not img_bytes:
                 img_bytes = b''
-            pil_img = Image.open("mock/camera.jpg")
+            pil_img = Image.open("../mock/camera.jpg")
             meta = rc.ImageMetadata(
                 capture_time=get_proto_timestamp(),
                 width=pil_img.width,
