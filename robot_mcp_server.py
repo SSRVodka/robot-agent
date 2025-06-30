@@ -9,9 +9,13 @@ from __future__ import annotations
 
 import asyncio.exceptions
 import functools
+import io
 import os
+import random
+import string
 import sys
-from typing import Callable, Dict, Any, Literal
+import time
+from typing import Callable, Dict, Any, Tuple
 
 import grpc
 from google.protobuf.json_format import MessageToDict
@@ -20,6 +24,17 @@ from fastmcp import FastMCP
 
 import proto.robot_control_pb2 as pb
 import proto.robot_control_pb2_grpc as pb_grpc
+
+# import numpy as np
+import base64
+from PIL import Image
+
+from prompts import VLM_SYS_PROMPT, VLM_DETECT_PROMPT
+from langchain_core.messages import HumanMessage, SystemMessage
+
+# It won't be written into requirements.txt
+# because it should be ported to OpenHarmony platform
+from ultralytics import YOLO
 
 import logging
 
@@ -61,9 +76,14 @@ def get_channel() -> grpc.aio.Channel:
     return GRPC_CHANNEL
 
 
-def get_grpc_stub() -> pb_grpc.RobotControlServiceStub:
+def get_grpc_control_stub() -> pb_grpc.RobotControlServiceStub:
     ch = get_channel()
     return pb_grpc.RobotControlServiceStub(ch)
+
+
+def get_grpc_vision_stub() -> pb_grpc.CameraServiceStub:
+    ch = get_channel()
+    return pb_grpc.CameraServiceStub(ch)
 
 
 def pb_to_dict(msg) -> Dict[str, Any]:
@@ -160,7 +180,7 @@ and the angle unit defaults to degrees (parameters roll, pitch, yaw).
         tolerance=tolerance,
         orientation_tolerance=orientation_tolerance,
     )
-    stub = get_grpc_stub()
+    stub = get_grpc_control_stub()
     logger.info("Calling MoveToPosition gRPC method")
 
     # stream move states
@@ -204,7 +224,7 @@ async def get_current_position() -> dict:
     Return a dictionary consisting of the coordinates of the current world coordinate system where the robot is located, \
 the robot's pose, power level, warning messages, and other data."""
     logger.info("Received get_current_position request")
-    stub = get_grpc_stub()
+    stub = get_grpc_control_stub()
     logger.info("Calling GetCurrentPosition gRPC method")
     resp: pb.ControlResponse = await stub.GetCurrentPosition(pb.Empty())
     state: pb.RobotState = resp.current_state
@@ -221,7 +241,7 @@ the robot's pose, power level, warning messages, and other data."""
 async def emergency_stop() -> dict:
     """Immediately halt all robot motion. Return error status (code, message, suggested actions, etc.)"""
     logger.info("Received emergency_stop request")
-    stub = get_grpc_stub()
+    stub = get_grpc_control_stub()
     logger.info("Calling EmergencyStop gRPC method")
     resp: pb.ControlResponse = await stub.EmergencyStop(pb.Empty())
     logger.info(f"EmergencyStop executed: {resp.message} (code: {resp.code})")
@@ -230,13 +250,36 @@ async def emergency_stop() -> dict:
 
 @mcp.tool
 @common_svr_handler
+# async def pick_up_object(object_name_hint: str, x_min: int, y_min: int, x_max: int, y_max: int) -> dict:
+#     """Pick up the specific object in front of the robot. object_name_hint represents the name for the object. \
+# x_min, y_min, x_max, y_max represent the pixel coordinates of the upper left and lower right corners of the object \
+# in the image. e.g., pick_up_object("banana", 220, 150, 520, 610).\
+#     It returns action result (code, message, etc.)"""
 async def pick_up_object(object_name_hint: str) -> dict:
     """Pick up the specific object in front of the robot. e.g., pick_up_object("banana").\
     Return action result (code, message, etc.)"""
     logger.info("Received pick_up_object request")
-    stub = get_grpc_stub()
+    stub = get_grpc_control_stub()
     logger.info("Calling PickUpObject gRPC method")
-    req = pb.PickOrPlaceCmd(cmd=object_name_hint)
+
+    try:
+        # detected_object_name, x_min, y_min, x_max, y_max = await get_xyxy_from_image()
+        x_min, y_min, x_max, y_max = await get_xyxy_from_image()
+    except Exception as e:
+        logger.error("failed to get xxyy from image when calling pick_up_object")
+        logger.error(f"details: {e}")
+        # return {"error": "Internal server error", "details": str(e)}
+        x_min = y_min = x_max = y_max = 0
+
+    # logger.info(f"Detected object '{detected_object_name}' at ({x_min},{y_min})-({x_max},{y_max}) "
+    #             f"when picking up '{object_name_hint}'")
+    logger.info(f"Detected object '{object_name_hint}' at ({x_min},{y_min})-({x_max},{y_max})")
+    # x_min = y_min = x_max = y_max = 0
+
+    req = pb.PickOrPlaceCmd(
+        cmd=object_name_hint,
+        x_min=int(x_min), y_min=int(y_min),
+        x_max=int(x_max), y_max=int(y_max))
 
     # stream pick-up
     async for state in stub.StreamPickUpObject(req):
@@ -249,7 +292,7 @@ async def pick_up_object(object_name_hint: str) -> dict:
         if state.warnings:
             logger.warning(f"Robot current warnings: {', '.join(state.warnings)}")
 
-        if not state.is_moving_arm:
+        if not state.is_moving_arm and state.state_code != pb.RobotState.MOVING:
             # stream ended
             break
 
@@ -265,7 +308,7 @@ async def pick_up_object(object_name_hint: str) -> dict:
 async def place_object(object_name_hint: str) -> dict:
     """Place the object grabbed by the robot. Return action result (code, message, etc.)"""
     logger.info("Received place_object request")
-    stub = get_grpc_stub()
+    stub = get_grpc_control_stub()
     logger.info("Calling PlaceObject gRPC method")
     req = pb.PickOrPlaceCmd(cmd=object_name_hint)
 
@@ -293,17 +336,12 @@ async def place_object(object_name_hint: str) -> dict:
 
 @mcp.tool
 @common_svr_handler
-async def move_relative(
-        direction: Literal[
-            "LEFT_FORWARD", "LEFT_BACKWARD",
-            "RIGHT_FORWARD", "RIGHT_BACKWARD",
-            "FORWARD", "BACKWARD"
-        ], distance: float) -> dict:
+async def move_relative(direction: str, distance: float) -> dict:
     """Do relative moving. `direction` can be 'LEFT_FORWARD', 'LEFT_BACKWARD', 'RIGHT_FORWARD', 'RIGHT_BACKWARD',\
     'FORWARD', or 'BACKWARD'. `distance` is meters. \
     Return action result (code, message, etc.)"""
     logger.info("Received move_relative request")
-    stub = get_grpc_stub()
+    stub = get_grpc_control_stub()
     logger.info("Calling MoveRelative gRPC method")
 
     # stream move states
@@ -322,6 +360,12 @@ async def move_relative(
             direction_.direction = pb.RobotDirection.FORWARD
         case "BACKWARD":
             direction_.direction = pb.RobotDirection.BACKWARD
+        case _:
+            return {
+                "code": pb.ControlResponse.INVALID_TARGET,
+                "message": f"invalid argument '{direction}' for param direction. "
+                "Use LEFT_FORWARD', 'LEFT_BACKWARD', 'RIGHT_FORWARD', 'RIGHT_BACKWARD', 'FORWARD', or 'BACKWARD'"
+            }
     direction_.distance = distance
     async for state in stub.StreamMove(direction_):
         logger.debug(
@@ -351,6 +395,99 @@ async def move_relative(
     logger.info(f"Received MoveRelative response: code={resp.code}, message={resp.message}")
 
     return pb_to_dict(resp)
+
+
+# @mcp.tool
+# @common_svr_handler
+async def get_robot_camera_image(save_dir: str | None = None) -> dict:
+    """Get the camera image data of the current robot. `save_dir` set to None means 'do not save image to disk'\
+    The returned image (in `image_url` field) is in base64 format."""
+    logger.info("Received get_robot_camera_image request")
+    stub = get_grpc_vision_stub()
+    logger.info("Calling GetImage gRPC method")
+
+    if save_dir is not None and not os.path.exists(save_dir):
+        logger.error(f"cannot find specific save directory: '{save_dir}'. Not save the image")
+        save_dir = None
+
+    resp: pb.ImageResponse = await stub.GetImage(pb.Empty())
+
+    image_bytes = resp.full_image
+    pil_image = Image.open(io.BytesIO(image_bytes))
+    if pil_image.mode != 'RGB':
+        pil_image = pil_image.convert('RGB')
+    # 先转换格式为 JPEG
+    buffered = io.BytesIO()
+    pil_image.save(buffered, format="JPEG")
+    fn = ""
+    if save_dir is not None:
+        # generate file name
+        # characters = string.ascii_letters + string.digits
+        # random_str = ''.join(random.choice(characters) fo
+        # r _ in range(16))
+        # filename = f"robot-camera-{random_str}.jpg"
+        filename = f"robot-camera-{time.time_ns()}.jpg"
+        fn = os.path.join(save_dir, filename)
+        pil_image.save(fn, format="JPEG")
+    # 再转换成 base64 编码，方便传递给大模型
+    base64_image = base64.b64encode(buffered.getvalue()).decode('utf-8')
+
+    # # (H, W, C)
+    # image_np = np.array(pil_image)
+    #
+    # depth_data = resp.depth_image.depth_data
+    # depth_min = resp.depth_image.min_depth
+    # depth_max = resp.depth_image.max_depth
+    #
+    # height = resp.metadata.height
+    # width = resp.metadata.width
+    # depth_array = np.array(depth_data).reshape((height, width))
+
+    return {
+        "type": "image_url",
+        "image_url": {
+            "url": f"data:image/jpeg;base64,{base64_image}",
+            "file": fn,
+            # "detail": "high"
+        }
+    }
+
+
+async def get_xyxy_from_image() -> Tuple[int, int, int, int]:
+    # result = await _vlm.ainvoke([
+    #     SystemMessage(content=VLM_SYS_PROMPT),
+    #     HumanMessage(content=[
+    #         {"type": "text", "text": VLM_DETECT_PROMPT},
+    #         await get_robot_camera_image()
+    #     ])
+    # ])
+    #
+    #
+    # try:
+    #     res_json = json.loads(result.text())
+    #     res_pts = res_json["xyxy"]
+    #     return res_json["object"], res_pts[0], res_pts[1], res_pts[2], res_pts[3]
+    # except Exception as e:
+    #     msg = f"failed to decode '{result.text()}' to JSON template " \
+    #         "{'object': 'name','xyxy': [xmin, ymin, xmax, ymax]}'"
+    #     logger.error(msg)
+    #     logger.error(f"details: {e}")
+    #     raise RuntimeError(msg)
+
+    os.makedirs("tmp", exist_ok=True)
+    resp = await get_robot_camera_image("tmp")
+
+    model = YOLO("models/best.pt")  # 加载预训练模型
+    results = model.predict(resp["image_url"]["file"])  # 推理
+    try:
+        boxes = results[0].boxes.xyxy
+        for box in boxes:
+            x_min, y_min, x_max, y_max = box.tolist()
+            print(f"左上角: ({x_min}, {y_min}), 右下角: ({x_max}, {y_max})")
+            return x_min, y_min, x_max, y_max
+    except Exception as e:
+        logger.warning(f"YOLO failed to recognize xyxy in image: {e}")
+        return 0, 0, 0, 0
 
 
 # ────────────────────────────────────────────────────────────────────────────

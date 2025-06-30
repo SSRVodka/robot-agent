@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 from datetime import datetime
 
 import prompts
-from agent import RobotAgent, _llm, _server_params
+from robot_agent import RobotAgent, _llm, _server_params
 
 app = Flask(__name__)
 
@@ -38,8 +38,8 @@ def handle_notification():
         # 3. 触发通知等
 
         _agent.submit_message(
-            "Please go to (0.96, -2.02) and fetch me a screwdriver, "
-            "then go to (0.37, -1.09) (yaw angle -180 degrees) here and give me the screwdriver")
+            "Please go to (0.96, -1.546) and fetch me a red block, "
+            "then go to (0.48, -0.86) (yaw angle = -180) and give me the red block")
 
         return jsonify({
             "status": "success",

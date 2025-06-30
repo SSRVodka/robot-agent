@@ -13,6 +13,8 @@ import proto.robot_control_pb2 as rc
 import proto.robot_control_pb2_grpc as rc_grpc
 import google.protobuf.timestamp_pb2 as g_timestamp
 
+from PIL import Image
+
 # 配置日志系统
 logging.basicConfig(
     level=logging.DEBUG,
@@ -248,14 +250,16 @@ class RobotSimulator:
             img_bytes = img.read()
             if not img_bytes:
                 img_bytes = b''
+            pil_img = Image.open("mock/camera.jpg")
             meta = rc.ImageMetadata(
                 capture_time=get_proto_timestamp(),
-                width=2592,
-                height=4608,
+                width=pil_img.width,
+                height=pil_img.height,
                 channels=3,
                 camera_position=self.position,
                 camera_orientation=self.orientation
             )
+            pil_img.close()
             camera_conf = rc.CameraConfig(
                 format=rc.CameraConfig.JPEG,
                 resolution=rc.CameraConfig.RES_UNKNOWN,

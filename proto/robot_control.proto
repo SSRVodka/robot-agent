@@ -90,6 +90,10 @@ message RobotDirection {
 // 夹起/放下命令
 message PickOrPlaceCmd {
   string cmd = 1;
+  uint32 x_min = 2;
+  uint32 y_min = 3;
+  uint32 x_max = 4;
+  uint32 y_max = 5;
 }
 
 service RobotControlService {

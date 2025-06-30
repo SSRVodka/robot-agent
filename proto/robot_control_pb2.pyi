@@ -127,10 +127,18 @@ class RobotDirection(_message.Message):
     def __init__(self, direction: _Optional[_Union[RobotDirection.Direction, str]] = ..., distance: _Optional[int] = ...) -> None: ...
 
 class PickOrPlaceCmd(_message.Message):
-    __slots__ = ("cmd",)
+    __slots__ = ("cmd", "x_min", "y_min", "x_max", "y_max")
     CMD_FIELD_NUMBER: _ClassVar[int]
+    X_MIN_FIELD_NUMBER: _ClassVar[int]
+    Y_MIN_FIELD_NUMBER: _ClassVar[int]
+    X_MAX_FIELD_NUMBER: _ClassVar[int]
+    Y_MAX_FIELD_NUMBER: _ClassVar[int]
     cmd: str
-    def __init__(self, cmd: _Optional[str] = ...) -> None: ...
+    x_min: int
+    y_min: int
+    x_max: int
+    y_max: int
+    def __init__(self, cmd: _Optional[str] = ..., x_min: _Optional[int] = ..., y_min: _Optional[int] = ..., x_max: _Optional[int] = ..., y_max: _Optional[int] = ...) -> None: ...
 
 class CameraConfig(_message.Message):
     __slots__ = ("format", "resolution", "frame_rate", "auto_exposure", "exposure_time", "gain", "color", "quality", "enable_depth", "enable_pointcloud")
