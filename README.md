@@ -1,5 +1,7 @@
 # Robot Agent Documentation
 
+[中文文档](./README_zh.md)
+
 ## Introduction
 
 The `robot-agent` repository is designed to provide a comprehensive solution for  controlling robots through a set of tools and services. It uses the  Model Context Protocol (MCP) to communicate with robot control services, enabling efficient and flexible robot operation. This README will guide you through the main components of the repository, how to set up the  environment, and how to use the provided functionality.
@@ -38,27 +40,27 @@ You can use environment variables to configure the gRPC host and port for the ro
 - `ROBOT_GRPC_HOST`: Host address of the gRPC server. The default is `localhost`.
 - `ROBOT_GRPC_PORT`: Port number of the gRPC server. The default is `50051`.
 
-You can also modify the configuration in Agent (`agent.py`) to specify it directly, for example:
+You can also modify the configuration in Agent (`common/config.py`) to specify it directly, for example:
 
 ``` python 
-server_params = StdioServerParameters( 
-    command="python", 
-    args=["robot_mcp_server.py", "--stdio", "--grpc-host", "192.168.12.210"], 
-) 
+server_params = StdioServerParameters(
+    command="python",
+    args=["robot_mcp_server.py", "--stdio", "--grpc-host", "192.168.12.210"],
+)
 ```
 
 ### 2. Model Configuration
 
-Refer to the configuration in ``agent.py`` and modify it to your own model information such as API Key:
+Refer to the configuration in ``common/config.py`` and modify it to your own model information such as API Key:
 
 ``` python 
-llm = ChatOpenAI( 
-    model_name="doubao-1.5-lite-32k-250115", 
-    temperature=0.3, 
-    base_url="https://ark.cn-beijing.volces.com/api/v3 ", # Here is an invalid API Key.
-    ## This is an invalid API Key, you need to replace it with your own information 
-    api_key="2e43d857-5bdd-41df-99e8-eba890f7e6e9" 
-) 
+llm = ChatOpenAI(
+    model_name="gpt-4o",
+    temperature=0.3,
+    base_url="https://api.openai.com/api/v1",
+    ## This is an invalid API Key, you need to replace it with your own information
+    api_key="6666666666666666666666666"
+)
 ```
 
 ### 3. Starting the project
@@ -73,10 +75,10 @@ pip install -e .
 
 - VSCode: add in `.vscode/settings.json`: 
     ```json 
-    { 
-        "terminal.integrated.env.linux": {"PYTHONPATH": "${workspaceFolder}"}, 
-        "python.analysis. extraPaths": ["${workspaceFolder}"] 
-    } 
+    {
+        "terminal.integrated.env.linux": {"PYTHONPATH": "${workspaceFolder}"},
+        "python.analysis.extraPaths": ["${workspaceFolder}"]
+    }
     ```
   
 - PyCharm: Right click on the project root -> Mark Directory as -> Sources Root;
@@ -91,7 +93,7 @@ python servers/external_control.py
 
 You can modify the startup configuration (e.g. ports, listening host addresses, etc.) in that file;
 
-If you want to run the tests in the simulator, you can change the listening address in `agent.py` to local and start `simulator.py` to give commands!
+If you want to run the tests in the simulator, you can change the listening address in `common/config.py` to local and start `servers/simulator.py` to give commands!
 
 > Note: Running `py_agent/robot_agent.py` directly will allow you to interact with Agent using the command line (not the HTTP interface).
 

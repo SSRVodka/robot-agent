@@ -35,7 +35,7 @@
 - `ROBOT_GRPC_HOST`： gRPC 服务器的主机地址。默认为 `localhost`。
 - `ROBOT_GRPC_PORT`： gRPC 服务器的端口号。默认为 `50051`。
 
-您还可以修改 Agent（`agent.py`）中的配置来直接指定，例如：
+您还可以修改 `common/config.py` 中的配置来直接指定，例如：
 
 ```python
 server_params = StdioServerParameters(
@@ -46,15 +46,15 @@ server_params = StdioServerParameters(
 
 ### 2. 模型配置
 
-参考 `agent.py` 中的配置，修改为你自己的 API Key 等模型信息：
+参考 `common/config.py` 中的配置，修改为你自己的 API Key 等模型信息：
 
 ```python
 llm = ChatOpenAI(
-    model_name="doubao-1.5-lite-32k-250115",
+    model_name="gpt-4o",
     temperature=0.3,
-    base_url="https://ark.cn-beijing.volces.com/api/v3",
+    base_url="https://api.openai.com/api/v1",
     # 这里是无效的 API Key，需要替换为自己的信息
-    api_key="2e43d857-5bdd-41df-99e8-eba890f7e6e9"
+    api_key="6666666666666666666"
 )
 ```
 
@@ -88,6 +88,6 @@ python servers/external_control.py
 
 你可以在该文件中修改启动配置（例如端口、监听主机地址等等）；
 
-如果你希望在模拟器中运行测试，则可以修改 `agent.py` 中的监听地址为本地，并且启动 `simulator.py`，即可下达指令！
+如果你希望在模拟器中运行测试，则可以修改 `common/config.py` 中的监听地址为本地，并且启动 `servers/simulator.py`，即可下达指令！
 
 > 注：直接运行 `py_agent/robot_agent.py` 即可使用命令行（而非 HTTP 接口）来与 Agent 交互。
